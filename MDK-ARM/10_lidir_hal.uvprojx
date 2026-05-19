@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../bsp</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../bsp;../app</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -507,6 +507,21 @@
               <FileName>bsp_lidar.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\bsp\bsp_lidar.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>app</GroupName>
+          <Files>
+            <File>
+              <FileName>app_detect.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\app_detect.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_communicat.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\app_communicat.c</FilePath>
             </File>
           </Files>
         </Group>

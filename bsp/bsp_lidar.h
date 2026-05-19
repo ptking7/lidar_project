@@ -2,58 +2,62 @@
 #define __BSP_LIDAR_H
 
 #include "stdint.h"
+#include "usart.h"
 
-// ==================== ºê¶¨Òå ====================
-#define RX_BUF_SIZE            1024        // DMA½ÓÊÕ»º³åÇø´óĞ¡£¨×Ö½Ú£©
-#define POINT_PER_PACK         12          // Ã¿°üµãÊı
-#define LIDAR_PACK_LEN         (1+1+2+2+ POINT_PER_PACK*3 +2+2+1)  // 47×Ö½Ú
-#define LIDAR_ANGLE_UNIT36000  36000u      // 360.00¶È¶ÔÓ¦0.01¶Èµ¥Î»Öµ
+// ==================== å®å®šä¹‰ ====================
+#define RX_BUF_SIZE            1024        // DMAæ¥æ”¶ç¼“å†²åŒºå¤§å°ï¼ˆå­—èŠ‚ï¼‰
+#define POINT_PER_PACK         12          // æ¯åŒ…ç‚¹æ•°
+#define LIDAR_PACK_LEN         (1+1+2+2+ POINT_PER_PACK*3 +2+2+1)  // 47å­—èŠ‚
+#define LIDAR_ANGLE_UNIT36000  36000u      // 360.00åº¦å¯¹åº”0.01åº¦å•ä½å€¼
 
 #ifndef LIDAR_STATS_ENABLE
-#define LIDAR_STATS_ENABLE      1          // ÆôÓÃÍ³¼ÆĞÅÏ¢´òÓ¡ ¶¨ÒåÎª0Ôò²»´òÓ¡Í³¼ÆĞÅÏ¢ 
+#define LIDAR_STATS_ENABLE      1          // å¯ç”¨ç»Ÿè®¡ä¿¡æ¯æ‰“å° å®šä¹‰ä¸º0åˆ™ä¸æ‰“å°ç»Ÿè®¡ä¿¡æ¯ 
 #endif
 
 #ifndef LIDAR_STATS_PERIOD_MS
-#define LIDAR_STATS_PERIOD_MS   50        // Í³¼Æ´òÓ¡ÖÜÆÚ£¨ºÁÃë£©
+#define LIDAR_STATS_PERIOD_MS   50        // ç»Ÿè®¡æ‰“å°å‘¨æœŸï¼ˆæ¯«ç§’ï¼‰
 #endif
 
-// ==================== Êı¾İ½á¹¹ ====================
-// Ô­Ê¼µãÊı¾İ½á¹¹£¨¶ÔÓ¦Í¨Ñ¶Ğ­Òé£©
+// ==================== æ•°æ®ç»“æ„ ====================
+// åŸå§‹ç‚¹æ•°æ®ç»“æ„ï¼ˆå¯¹åº”é€šè®¯åè®®ï¼‰
 typedef struct __attribute__((packed)) {
-    uint16_t distance;   // ¾àÀë(mm)
-    uint8_t  intensity;  // Ç¿¶È
+    uint16_t distance;   // è·ç¦»(mm)
+    uint8_t  intensity;  // å¼ºåº¦
 } LidarRawPoint_t;
 
-// Ô­Ê¼°ü½á¹¹
+// åŸå§‹åŒ…ç»“æ„
 typedef struct __attribute__((packed)) {
     uint8_t  header;          // 0x54
     uint8_t  ver_len;         // 0x2C
     uint16_t speed;
     uint16_t start_angle;
-    LidarRawPoint_t point[POINT_PER_PACK];    //µãÔÆÊı¾İ
+    LidarRawPoint_t point[POINT_PER_PACK];    //ç‚¹äº‘æ•°æ®
     uint16_t end_angle;
     uint16_t timestamp;
     uint8_t  crc8;
 } LidarRawFrame_t;
 
-// ¶ÔÍâÊä³öµÄµã½á¹¹£¨´ø½Ç¶È£©
+// å¯¹å¤–è¾“å‡ºçš„ç‚¹ç»“æ„ï¼ˆå¸¦è§’åº¦ï¼‰
 typedef struct {
-    float    angle_deg;      // ½Ç¶È£¨¶È£©
-    uint16_t distance_mm;    // ¾àÀë£¨ºÁÃ×£©
+    float    angle_deg;      // è§’åº¦ï¼ˆåº¦ï¼‰
+    uint16_t distance_mm;    // è·ç¦»ï¼ˆæ¯«ç±³ï¼‰
     uint8_t  intensity;
 } LidarPoint_t;
 
-// ==================== ½Ó¿Úº¯Êı£¨ÓÃ»§Ö»Ğè¹Ø×¢ÕâĞ©º¯Êı£© ====================
+// ==================== æ¥å£å‡½æ•°ï¼ˆç”¨æˆ·åªéœ€å…³æ³¨è¿™äº›å‡½æ•°ï¼‰ ====================
 /**
- * @brief ³õÊ¼»¯¼¤¹âÀ×´ïÄ£¿é£¨ÆôÓÃDMA½ÓÊÕ£©
- * @param out_points Íâ²¿Ìá¹©µÄµãÊı¾İ»º³åÇøÖ¸Õë£¨´óĞ¡Îª POINT_PER_PACK * LidarPoint_t£©
+ * @brief åˆå§‹åŒ–æ¿€å…‰é›·è¾¾æ¨¡å—ï¼ˆå¯ç”¨DMAæ¥æ”¶ï¼‰
+ * @param out_points å¤–éƒ¨æä¾›çš„ç‚¹æ•°æ®ç¼“å†²åŒºæŒ‡é’ˆï¼ˆå¤§å°ä¸º POINT_PER_PACK * LidarPoint_tï¼‰
  */
 void lidar_init(LidarPoint_t *out_points);
 
 void lidar_process(void);
+/** æœ‰æ–°ç‚¹äº‘å¸§è§£ææˆåŠŸæ—¶è¿”å› 1ï¼ˆè¯»åæ¸…é™¤ï¼‰ï¼Œä¾›ä¸Šå±‚æ£€æµ‹æ¨¡å—ä½¿ç”¨ */
+int lidar_take_frame_ready(void);
 int dma_printf(const char *format, ...);
-//Ñ­»·´òÓ¡Í³¼ÆĞÅÏ¢
+//å¾ªç¯æ‰“å°ç»Ÿè®¡ä¿¡æ¯
 void lidar_print_stats(void);
-//ÖÜÆÚ´òÓ¡µãÔÆ(200ms´òÓ¡Ò»´Î£¬±ÜÃâË¢ÆÁ)
+//å‘¨æœŸæ‰“å°ç‚¹äº‘(200msæ‰“å°ä¸€æ¬¡ï¼Œé¿å…åˆ·å±)
 void lidar_print_points_periodic(LidarPoint_t *points);
+void bsp_lidar_uart_tx_cplt(UART_HandleTypeDef *huart);
 #endif // __BSP_LIDAR_H

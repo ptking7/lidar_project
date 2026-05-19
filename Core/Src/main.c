@@ -25,6 +25,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bsp_lidar.h"
+#include "app_detect.h"
+#include "app_communicat.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -92,8 +94,10 @@ int main(void)
   MX_USART2_UART_Init();
   MX_UART4_Init();
   /* USER CODE BEGIN 2 */
-	//将自己定义的结构体数据传进去
+	//????????????????
   lidar_init(lidar_output_points);
+  app_detect_init();
+  app_comm_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -103,12 +107,13 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		/* 核心：处理雷达DMA数据+解析帧+状态打印 */
+		/* ?????????DMA??+????+????? */
     lidar_process();
-    
-    /* 周期性打印雷达点云（200ms一次）串口4显示 */
-    lidar_print_points_periodic(lidar_output_points);
-    
+    if (lidar_take_frame_ready()) {
+      app_detect_feed(lidar_output_points, POINT_PER_PACK);
+    }
+    app_detect_process();
+    app_comm_process();
   }
   /* USER CODE END 3 */
 }
@@ -153,6 +158,11 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+  bsp_lidar_uart_tx_cplt(huart);
+  app_comm_uart_tx_cplt(huart);
+}
 
 /* USER CODE END 4 */
 

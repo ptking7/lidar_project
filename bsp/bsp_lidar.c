@@ -1,22 +1,22 @@
 /*********************************************************************************
- * @brief    ¼¤¹âÀ×´ïÇı¶¯Ê¹ÓÃËµÃ÷ & Ó²¼ş½ÓÏß & DMAÅäÖÃ
+ * @brief    æ¿€å…‰é›·è¾¾é©±åŠ¨ä½¿ç”¨è¯´æ˜ & ç¡¬ä»¶æ¥çº¿ & DMAé…ç½®
  * ===============================================================================
  * MCU:STM32F103RCT6
- * Ó²¼ş½ÓÏß£º
- * 1. À×´ï TX   ¡ú  STM32 PA3 (USART2_RX)
- * 2. µ÷ÊÔRX   ¡ú  STM32 PC10 (UART4_TX)
- * 3. ËùÓĞÉè±¸¹²µØ£¬À×´ï¹©µç5V
+ * ç¡¬ä»¶æ¥çº¿ï¼š
+ * 1. é›·è¾¾ TX   â†’  STM32 PA3 (USART2_RX)
+ * 2. è°ƒè¯•RX   â†’  STM32 PC10 (UART4_TX)
+ * 3. æ‰€æœ‰è®¾å¤‡å…±åœ°ï¼Œé›·è¾¾ä¾›ç”µ5V
  * ===============================================================================
- * Ê¹ÓÃËµÃ÷£º
- * 1. Ö÷º¯Êıµ÷ÓÃ lidar_init() ³õÊ¼»¯
- * 2. Ö÷Ñ­»·µ÷ÓÃ lidar_process() ´¦ÀíÊı¾İ
- * 3. µ÷ÓÃ lidar_print_points_periodic() ´òÓ¡µãÔÆÊı¾İ
- * 4. ´®¿Ú²ÎÊı£ºÀ×´ï230400 £¬µ÷ÊÔ115200
+ * ä½¿ç”¨è¯´æ˜ï¼š
+ * 1. ä¸»å‡½æ•°è°ƒç”¨ lidar_init() åˆå§‹åŒ–
+ * 2. ä¸»å¾ªç¯è°ƒç”¨ lidar_process() å¤„ç†æ•°æ®
+ * 3. è°ƒç”¨ lidar_print_points_periodic() æ‰“å°ç‚¹äº‘æ•°æ®
+ * 4. ä¸²å£å‚æ•°ï¼šé›·è¾¾230400 ï¼Œè°ƒè¯•115200
  * ===============================================================================
- * DMAÅäÖÃ£º
- * 1. USART2_RX£ºDMA1Í¨µÀ6£¬»·ĞÎÄ£Ê½£¬ÍâÉè¡úÄÚ´æ
- * 2. UART4_TX£ºDMA2Í¨µÀ5£¬ÆÕÍ¨Ä£Ê½£¬ÄÚ´æ¡úÍâÉè
- * 3. Á½¸ö´®¿Ú¾ù¿ªÆôÈ«¾ÖÖĞ¶Ï
+ * DMAé…ç½®ï¼š
+ * 1. USART2_RXï¼šDMA1é€šé“6ï¼Œç¯å½¢æ¨¡å¼ï¼Œå¤–è®¾â†’å†…å­˜
+ * 2. UART4_TXï¼šDMA2é€šé“5ï¼Œæ™®é€šæ¨¡å¼ï¼Œå†…å­˜â†’å¤–è®¾
+ * 3. ä¸¤ä¸ªä¸²å£å‡å¼€å¯å…¨å±€ä¸­æ–­
  *********************************************************************************/
 
 #include "bsp_lidar.h"
@@ -25,32 +25,33 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-// ==================== ÄÚ²¿È«¾Ö±äÁ¿ ====================
-// DMA½ÓÊÕ»º³åÇø£¨»·ĞÎ»º³åÇø£¬´æ´¢À×´ïÔ­Ê¼½ÓÊÕÊı¾İ£©
+// ==================== å†…éƒ¨å…¨å±€å˜é‡ ====================
+// DMAæ¥æ”¶ç¼“å†²åŒºï¼ˆç¯å½¢ç¼“å†²åŒºï¼Œå­˜å‚¨é›·è¾¾åŸå§‹æ¥æ”¶æ•°æ®ï¼‰
 static uint8_t rx_dma_buf[RX_BUF_SIZE];
 
-// Í³¼ÆÓÃ±äÁ¿£¨ÄÚ²¿Ê¹ÓÃ£¬Íâ²¿¿ÉÍ¨¹ıµ÷ÊÔ·½Ê½¶ÁÈ¡£©
-static volatile uint32_t g_lidar_rx_byte_count = 0;  // ÀÛ¼Æ½ÓÊÕ×Ö½ÚÊı
-static volatile uint32_t g_lidar_frame_ok_count = 0; // ½âÎö³É¹¦µÄÖ¡Êı
+// ç»Ÿè®¡ç”¨å˜é‡ï¼ˆå†…éƒ¨ä½¿ç”¨ï¼Œå¤–éƒ¨å¯é€šè¿‡è°ƒè¯•æ–¹å¼è¯»å–ï¼‰
+static volatile uint32_t g_lidar_rx_byte_count = 0;  // ç´¯è®¡æ¥æ”¶å­—èŠ‚æ•°
+static volatile uint32_t g_lidar_frame_ok_count = 0; // è§£ææˆåŠŸçš„å¸§æ•°
 
-// Ö¸ÏòÍâ²¿Ìá¹©µÄµãÊı¾İ»º³åÇøµÄÖ¸Õë£¨ÓÉlidar_init´«Èë£©
+// æŒ‡å‘å¤–éƒ¨æä¾›çš„ç‚¹æ•°æ®ç¼“å†²åŒºçš„æŒ‡é’ˆï¼ˆç”±lidar_initä¼ å…¥ï¼‰
 static LidarPoint_t *g_output_points = NULL;
 
-// °ü½âÎö»º³åÇø£¨ÁÙÊ±´æ´¢ÕıÔÚ½âÎöµÄµ¥Ö¡Êı¾İ£©
+// åŒ…è§£æç¼“å†²åŒºï¼ˆä¸´æ—¶å­˜å‚¨æ­£åœ¨è§£æçš„å•å¸§æ•°æ®ï¼‰
 static uint8_t lidar_frame_buf[LIDAR_PACK_LEN];
-static uint16_t lidar_frame_idx = 0; // Ö¡½âÎö»º³åÇøµ±Ç°Ë÷Òı
+static uint16_t lidar_frame_idx = 0; // å¸§è§£æç¼“å†²åŒºå½“å‰ç´¢å¼•
 
-// DMA½ÓÊÕ»·»º³åÇøÖ¸Õë£¨¼ÇÂ¼ÉÏÒ»´Î´¦Àíµ½µÄÎ»ÖÃ£©
+// DMAæ¥æ”¶ç¯ç¼“å†²åŒºæŒ‡é’ˆï¼ˆè®°å½•ä¸Šä¸€æ¬¡å¤„ç†åˆ°çš„ä½ç½®ï¼‰
 static uint16_t lidar_dma_old_pos = 0;
 
-// DMA·¢ËÍÃ¦±êÖ¾£¨0=¿ÕÏĞ£¬1=·¢ËÍÖĞ£©
+// DMAå‘é€å¿™æ ‡å¿—ï¼ˆ0=ç©ºé—²ï¼Œ1=å‘é€ä¸­ï¼‰
 static volatile uint8_t dma_tx_busy = 0;
-static char tx_buf[512]; // DMA´òÓ¡»º³åÇø
+static char tx_buf[512]; // DMAæ‰“å°ç¼“å†²åŒº
 
-static uint32_t last_rx_byte_count = 0; // ÉÏÒ»´Î½ÓÊÕ×Ö½ÚÊı£¨ÓÃÓÚ³¬Ê±¼ì²â£©
-static uint32_t last_rx_time = 0;       // ÉÏÒ»´Î½ÓÊÕÊı¾İµÄÊ±¼ä´Á£¨ms£©
+static uint32_t last_rx_byte_count = 0; // ä¸Šä¸€æ¬¡æ¥æ”¶å­—èŠ‚æ•°ï¼ˆç”¨äºè¶…æ—¶æ£€æµ‹ï¼‰
+static uint32_t last_rx_time = 0;       // ä¸Šä¸€æ¬¡æ¥æ”¶æ•°æ®çš„æ—¶é—´æˆ³ï¼ˆmsï¼‰
+static volatile uint8_t g_frame_ready = 0;
 
-// ==================== CRC8±í£¨À×´ïÖ¡Ğ£Ñé×¨ÓÃ£© ====================
+// ==================== CRC8è¡¨ï¼ˆé›·è¾¾å¸§æ ¡éªŒä¸“ç”¨ï¼‰ ====================
 static const uint8_t LIDAR_CRC_TABLE[256] = {
     0x00, 0x4d, 0x9a, 0xd7, 0x79, 0x34, 0xe3, 0xae, 0xf2, 0xbf, 0x68, 0x25,
     0x8b, 0xc6, 0x11, 0x5c, 0xa9, 0xe4, 0x33, 0x7e, 0xd0, 0x9d, 0x4a, 0x07,
@@ -76,19 +77,19 @@ static const uint8_t LIDAR_CRC_TABLE[256] = {
     0x7f, 0x32, 0xe5, 0xa8
 };
 
-// ==================== ÄÚ²¿º¯ÊıÉùÃ÷ ====================
+// ==================== å†…éƒ¨å‡½æ•°å£°æ˜ ====================
 static uint8_t calc_crc8(const uint8_t *data, uint32_t len);
 static void parse_lidar_frame(const uint8_t *raw_data, LidarPoint_t *out_points, uint32_t *point_cnt);
 static void lidar_feed_stream(const uint8_t *data, uint16_t len);
 static void lidar_process_dma_stream(void);
 
-// ==================== ÄÚ²¿ÊµÏÖ ====================
+// ==================== å†…éƒ¨å®ç° ====================
 /**
- * @brief ¼ÆËãÊı¾İµÄCRC8Ğ£ÑéÖµ£¨À×´ïÖ¡Ğ£Ñé×¨ÓÃ£©
- * @param data ´ıĞ£ÑéÊı¾İÖ¸Õë
- * @param len  ´ıĞ£ÑéÊı¾İ³¤¶È
- * @return ¼ÆËãµÃµ½µÄCRC8Öµ
- * @note  Ê¹ÓÃÀ×´ïĞ­ÒéÖ¸¶¨µÄCRC8±í£¬¶àÏîÊ½Îª0x31
+ * @brief è®¡ç®—æ•°æ®çš„CRC8æ ¡éªŒå€¼ï¼ˆé›·è¾¾å¸§æ ¡éªŒä¸“ç”¨ï¼‰
+ * @param data å¾…æ ¡éªŒæ•°æ®æŒ‡é’ˆ
+ * @param len  å¾…æ ¡éªŒæ•°æ®é•¿åº¦
+ * @return è®¡ç®—å¾—åˆ°çš„CRC8å€¼
+ * @note  ä½¿ç”¨é›·è¾¾åè®®æŒ‡å®šçš„CRC8è¡¨ï¼Œå¤šé¡¹å¼ä¸º0x31
  */
 static uint8_t calc_crc8(const uint8_t *data, uint32_t len)
 {
@@ -101,19 +102,19 @@ static uint8_t calc_crc8(const uint8_t *data, uint32_t len)
 }
 
 /**
- * @brief ½âÎöÀ×´ïÔ­Ê¼Ö¡Êı¾İÎªµãÔÆ½á¹¹
- * @param raw_data Ô­Ê¼Ö¡Êı¾İÖ¸Õë£¨Ğè³¤¶ÈÎªLIDAR_PACK_LEN£©
- * @param out_points ½âÎöºóµÄµãÔÆÊä³ö»º³åÇø
- * @param point_cnt Êä³ö£º³É¹¦½âÎöµÄµãÔÆÊıÁ¿£¨³É¹¦=POINT_PER_PACK£¬Ê§°Ü=0£©
- * @note  1. »áĞ£ÑéÖ¡Í·¡¢Ö¡³¤¶È¡¢CRC8£¬ÈÎÒ»Ğ£ÑéÊ§°ÜÔò·µ»Ø0¸öµã
- *        2. ½Ç¶È¼ÆËã¿¼ÂÇ360¡ãÑ­»·£¨Èç½áÊø½Ç¶È<ÆğÊ¼½Ç¶ÈÊ±×Ô¶¯²¹360¡ã£©
- *        3. ½Ç¶È¾«¶È×ª»»£ºÔ­Ê¼0.01¡ãµ¥Î» ¡ú ¸¡µãÊı¡ã
+ * @brief è§£æé›·è¾¾åŸå§‹å¸§æ•°æ®ä¸ºç‚¹äº‘ç»“æ„
+ * @param raw_data åŸå§‹å¸§æ•°æ®æŒ‡é’ˆï¼ˆéœ€é•¿åº¦ä¸ºLIDAR_PACK_LENï¼‰
+ * @param out_points è§£æåçš„ç‚¹äº‘è¾“å‡ºç¼“å†²åŒº
+ * @param point_cnt è¾“å‡ºï¼šæˆåŠŸè§£æçš„ç‚¹äº‘æ•°é‡ï¼ˆæˆåŠŸ=POINT_PER_PACKï¼Œå¤±è´¥=0ï¼‰
+ * @note  1. ä¼šæ ¡éªŒå¸§å¤´ã€å¸§é•¿åº¦ã€CRC8ï¼Œä»»ä¸€æ ¡éªŒå¤±è´¥åˆ™è¿”å›0ä¸ªç‚¹
+ *        2. è§’åº¦è®¡ç®—è€ƒè™‘360Â°å¾ªç¯ï¼ˆå¦‚ç»“æŸè§’åº¦<èµ·å§‹è§’åº¦æ—¶è‡ªåŠ¨è¡¥360Â°ï¼‰
+ *        3. è§’åº¦ç²¾åº¦è½¬æ¢ï¼šåŸå§‹0.01Â°å•ä½ â†’ æµ®ç‚¹æ•°Â°
  */
 static void parse_lidar_frame(const uint8_t *raw_data, LidarPoint_t *out_points, uint32_t *point_cnt)
 {
     LidarRawFrame_t *frame = (LidarRawFrame_t*)raw_data;
     *point_cnt = 0;
-    //°üÍ·°üÎ²crcĞ£Ñé
+    //åŒ…å¤´åŒ…å°¾crcæ ¡éªŒ
     if (frame->header != 0x54) return;
     if (frame->ver_len != 0x2C) return;
     if (calc_crc8(raw_data, LIDAR_PACK_LEN - 1) != frame->crc8) return;
@@ -140,17 +141,17 @@ static void parse_lidar_frame(const uint8_t *raw_data, LidarPoint_t *out_points,
 }
 
 /**
- * @brief Á÷Ê½Êı¾İÎ¹Èëº¯Êı£¨Öğ×Ö½Ú½âÎöÖ¡Êı¾İ£©
- * @param data ´ı½âÎöµÄÔ­Ê¼Êı¾İÖ¸Õë
- * @param len  ´ı½âÎöÊı¾İ³¤¶È
- * @note  1. °´À×´ïÖ¡Ğ­ÒéÖğ×Ö½ÚÆ´½ÓÊı¾İ£¬Ö±µ½´Õ¹»Ò»Ö¡
- *        2. Ö¡Í·Îª0x54£¬Ö¡³¤¶ÈÎª0x2C£¬Ğ£ÑéÍ¨¹ıºóµ÷ÓÃ½âÎöº¯Êı
- *        3. ´¦ÀíÖ¡±ß½ç£ºÈôÖ¡Î²×Ö½ÚÎª0x54£¬Ö±½Ó×÷ÎªÏÂÒ»Ö¡µÄÖ¡Í·£¬¼õÉÙ¶ª°ü
- *        4. ÈôÍâ²¿»º³åÇøÎ´³õÊ¼»¯£¨g_output_points=NULL£©£¬Ö±½Ó·µ»Ø
+ * @brief æµå¼æ•°æ®å–‚å…¥å‡½æ•°ï¼ˆé€å­—èŠ‚è§£æå¸§æ•°æ®ï¼‰
+ * @param data å¾…è§£æçš„åŸå§‹æ•°æ®æŒ‡é’ˆ
+ * @param len  å¾…è§£ææ•°æ®é•¿åº¦
+ * @note  1. æŒ‰é›·è¾¾å¸§åè®®é€å­—èŠ‚æ‹¼æ¥æ•°æ®ï¼Œç›´åˆ°å‡‘å¤Ÿä¸€å¸§
+ *        2. å¸§å¤´ä¸º0x54ï¼Œå¸§é•¿åº¦ä¸º0x2Cï¼Œæ ¡éªŒé€šè¿‡åè°ƒç”¨è§£æå‡½æ•°
+ *        3. å¤„ç†å¸§è¾¹ç•Œï¼šè‹¥å¸§å°¾å­—èŠ‚ä¸º0x54ï¼Œç›´æ¥ä½œä¸ºä¸‹ä¸€å¸§çš„å¸§å¤´ï¼Œå‡å°‘ä¸¢åŒ…
+ *        4. è‹¥å¤–éƒ¨ç¼“å†²åŒºæœªåˆå§‹åŒ–ï¼ˆg_output_points=NULLï¼‰ï¼Œç›´æ¥è¿”å›
  */
 static void lidar_feed_stream(const uint8_t *data, uint16_t len)
 {
-    // È·±£Êä³ö»º³åÇøÓĞĞ§
+    // ç¡®ä¿è¾“å‡ºç¼“å†²åŒºæœ‰æ•ˆ
     if (g_output_points == NULL) return;
 
     for (uint16_t i = 0; i < len; i++) {
@@ -171,15 +172,16 @@ static void lidar_feed_stream(const uint8_t *data, uint16_t len)
 
         if (lidar_frame_idx >= LIDAR_PACK_LEN) {
             uint32_t point_cnt = 0;
-            // Ö±½Ó½âÎöµ½Íâ²¿Ìá¹©µÄ»º³åÇø
+            // ç›´æ¥è§£æåˆ°å¤–éƒ¨æä¾›çš„ç¼“å†²åŒº
             parse_lidar_frame(lidar_frame_buf, g_output_points, &point_cnt);
             if (point_cnt == POINT_PER_PACK) {
 #if LIDAR_STATS_ENABLE
                 g_lidar_frame_ok_count++;
 #endif
+                g_frame_ready = 1u;
             }
 
-            // ´¦Àí°ü±ß½ç
+            // å¤„ç†åŒ…è¾¹ç•Œ
             if (byte == 0x54) {
                 lidar_frame_buf[0] = 0x54;
                 lidar_frame_idx = 1;
@@ -191,11 +193,11 @@ static void lidar_feed_stream(const uint8_t *data, uint16_t len)
 }
 
 /**
- * @brief ´¦ÀíDMA½ÓÊÕµÄÁ÷Ê½Êı¾İ£¨»·ĞÎ»º³åÇø´¦Àí£©
- * @note  1. ¼ÆËãµ±Ç°DMA½ÓÊÕÎ»ÖÃÓëÉÏÒ»´Î´¦ÀíÎ»ÖÃµÄ²îÖµ£¬»ñÈ¡ĞÂ½ÓÊÕµÄÊı¾İ³¤¶È
- *        2. ´¦Àí»·ĞÎ»º³åÇøµÄ»ØÈÆ£¨pos < old_posÊ±£¬·ÖÁ½¶Î´¦Àí£©
- *        3. ÀÛ¼Æ½ÓÊÕ×Ö½ÚÊı£¬µ÷ÓÃÁ÷Ê½½âÎöº¯Êı´¦ÀíĞÂÊı¾İ
- *        4. ¸üĞÂÉÏÒ»´Î´¦ÀíÎ»ÖÃ£¬±ÜÃâÖØ¸´½âÎö
+ * @brief å¤„ç†DMAæ¥æ”¶çš„æµå¼æ•°æ®ï¼ˆç¯å½¢ç¼“å†²åŒºå¤„ç†ï¼‰
+ * @note  1. è®¡ç®—å½“å‰DMAæ¥æ”¶ä½ç½®ä¸ä¸Šä¸€æ¬¡å¤„ç†ä½ç½®çš„å·®å€¼ï¼Œè·å–æ–°æ¥æ”¶çš„æ•°æ®é•¿åº¦
+ *        2. å¤„ç†ç¯å½¢ç¼“å†²åŒºçš„å›ç»•ï¼ˆpos < old_posæ—¶ï¼Œåˆ†ä¸¤æ®µå¤„ç†ï¼‰
+ *        3. ç´¯è®¡æ¥æ”¶å­—èŠ‚æ•°ï¼Œè°ƒç”¨æµå¼è§£æå‡½æ•°å¤„ç†æ–°æ•°æ®
+ *        4. æ›´æ–°ä¸Šä¸€æ¬¡å¤„ç†ä½ç½®ï¼Œé¿å…é‡å¤è§£æ
  */
 static void lidar_process_dma_stream(void)
 {
@@ -224,13 +226,13 @@ static void lidar_process_dma_stream(void)
 }
 
 /**
- * @brief ´òÓ¡À×´ïÍ³¼ÆĞÅÏ¢£¨ÄÚ²¿µ÷ÓÃ£¬lidar_processÖĞÖÜÆÚÖ´ĞĞ£©
- * @note  1. °´LIDAR_STATS_PERIOD_MSÖÜÆÚ¼ÆËã²¢´òÓ¡£º
- *           - B/s£ºÃ¿Ãë½ÓÊÕ×Ö½ÚÊı
- *           - FPS£ºÃ¿Ãë½âÎö³É¹¦Ö¡Êı
- *           - success£º½âÎö³É¹¦ÂÊ£¨³É¹¦Ö¡×Ö½ÚÊı/×Ü½ÓÊÕ×Ö½ÚÊı*100%£©
- *        2. »ùÓÚHAL_GetTick()¼ÆÊ±£¬¼æÈİÂã»ú»·¾³
- *        3. ½öÔÚLIDAR_STATS_ENABLE=1Ê±ÉúĞ§
+ * @brief æ‰“å°é›·è¾¾ç»Ÿè®¡ä¿¡æ¯ï¼ˆå†…éƒ¨è°ƒç”¨ï¼Œlidar_processä¸­å‘¨æœŸæ‰§è¡Œï¼‰
+ * @note  1. æŒ‰LIDAR_STATS_PERIOD_MSå‘¨æœŸè®¡ç®—å¹¶æ‰“å°ï¼š
+ *           - B/sï¼šæ¯ç§’æ¥æ”¶å­—èŠ‚æ•°
+ *           - FPSï¼šæ¯ç§’è§£ææˆåŠŸå¸§æ•°
+ *           - successï¼šè§£ææˆåŠŸç‡ï¼ˆæˆåŠŸå¸§å­—èŠ‚æ•°/æ€»æ¥æ”¶å­—èŠ‚æ•°*100%ï¼‰
+ *        2. åŸºäºHAL_GetTick()è®¡æ—¶ï¼Œå…¼å®¹è£¸æœºç¯å¢ƒ
+ *        3. ä»…åœ¨LIDAR_STATS_ENABLE=1æ—¶ç”Ÿæ•ˆ
  */
 void lidar_print_stats(void)
 {
@@ -252,11 +254,11 @@ void lidar_print_stats(void)
         uint32_t bps_est = (dbytes * 1000u) / LIDAR_STATS_PERIOD_MS;
         uint32_t fps_est = (dframes * 1000u) / LIDAR_STATS_PERIOD_MS;
 
-        // ¼ÆËã³É¹¦ÂÊ£ºÊµ¼ÊÖ¡Êı / ÀíÂÛÖ¡Êı * 100%£¬±ÜÃâ³ıÁã
+        // è®¡ç®—æˆåŠŸç‡ï¼šå®é™…å¸§æ•° / ç†è®ºå¸§æ•° * 100%ï¼Œé¿å…é™¤é›¶
         float success_rate = 0.0f;
         if (bps_est > 0) {
             success_rate = ((float)fps_est * LIDAR_PACK_LEN / bps_est) * 100.0f;
-					  //ÒòÎªÀ×´ï´«ÊäËÙÂÊÌ«¸ß£¬ÓĞÊ±ºòÓĞ1msµÄÎó²î»áµ¼ÖÂ³¬³ö100£¬ÕâÀï¾ØĞÎÏŞ·ù
+					  //å› ä¸ºé›·è¾¾ä¼ è¾“é€Ÿç‡å¤ªé«˜ï¼Œæœ‰æ—¶å€™æœ‰1msçš„è¯¯å·®ä¼šå¯¼è‡´è¶…å‡º100ï¼Œè¿™é‡ŒçŸ©å½¢é™å¹…
 					  if(success_rate > 100.0f) success_rate = 100.0f;
         }
 
@@ -265,12 +267,21 @@ void lidar_print_stats(void)
     }
 }
 
-// ==================== ¶ÔÍâ½Ó¿Ú ====================
+// ==================== å¯¹å¤–æ¥å£ ====================
 void lidar_init(LidarPoint_t *out_points)
 {
     if (out_points == NULL) return;
     g_output_points = out_points;
     HAL_UART_Receive_DMA(&huart2, rx_dma_buf, RX_BUF_SIZE);
+}
+
+int lidar_take_frame_ready(void)
+{
+    if (g_frame_ready == 0u) {
+        return 0;
+    }
+    g_frame_ready = 0u;
+    return 1;
 }
 
 void lidar_process(void)
@@ -281,17 +292,17 @@ void lidar_process(void)
 #endif
    
 	
-    // ³¬Ê±¼ì²âÂß¼­£º500msÎŞÊı¾İÔòÇå¿ÕµãÔÆ
+    // è¶…æ—¶æ£€æµ‹é€»è¾‘ï¼š500msæ— æ•°æ®åˆ™æ¸…ç©ºç‚¹äº‘
     uint32_t now = HAL_GetTick();  
     if (g_lidar_rx_byte_count == last_rx_byte_count) {
-        // ÎŞ½ÓÊÕ×Ö½Ú
+        // æ— æ¥æ”¶å­—èŠ‚
         if ((now - last_rx_time) > 500) {  
             if (g_output_points != NULL) {
                 memset(g_output_points, 0, POINT_PER_PACK * sizeof(LidarPoint_t));
-                // ¿ÉÑ¡Í¬Ê±Çå¿Õ°ü½âÎö»º³åÇø
+                // å¯é€‰åŒæ—¶æ¸…ç©ºåŒ…è§£æç¼“å†²åŒº
                 lidar_frame_idx = 0;
             }
-            last_rx_byte_count = g_lidar_rx_byte_count; // ·ÀÖ¹ÖØ¸´´¥·¢
+            last_rx_byte_count = g_lidar_rx_byte_count; // é˜²æ­¢é‡å¤è§¦å‘
         }
     } else {
         last_rx_byte_count = g_lidar_rx_byte_count;
@@ -299,14 +310,14 @@ void lidar_process(void)
     }
 }
 
-// ==================== »Øµ÷º¯Êı£¨HAL¿â£© ====================
+// ==================== å›è°ƒå‡½æ•°ï¼ˆHALåº“ï¼‰ ====================
 /**
- * @brief UART DMA·¢ËÍÍê³É»Øµ÷º¯Êı
- * @param huart UART¾ä±úÖ¸Õë
- * @note  1. ½ö´¦ÀíUART4µÄ·¢ËÍÍê³ÉÊÂ¼ş
- *        2. Çå¿Õdma_tx_busy±êÖ¾£¬ÔÊĞíÏÂÒ»´Îdma_printfµ÷ÓÃ
+ * @brief UART DMAå‘é€å®Œæˆå›è°ƒå‡½æ•°
+ * @param huart UARTå¥æŸ„æŒ‡é’ˆ
+ * @note  1. ä»…å¤„ç†UART4çš„å‘é€å®Œæˆäº‹ä»¶
+ *        2. æ¸…ç©ºdma_tx_busyæ ‡å¿—ï¼Œå…è®¸ä¸‹ä¸€æ¬¡dma_printfè°ƒç”¨
  */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+void bsp_lidar_uart_tx_cplt(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == UART4) {
         dma_tx_busy = 0;
@@ -316,12 +327,12 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 // dma_printf
 int dma_printf(const char *format, ...)
 {
-    while (dma_tx_busy); // µÈ´ıÉÏÒ»´Î·¢ËÍÍê³É
+    while (dma_tx_busy); // ç­‰å¾…ä¸Šä¸€æ¬¡å‘é€å®Œæˆ
     va_list args;
     va_start(args, format);
-    int len = vsnprintf(tx_buf, sizeof(tx_buf), format, args); // ¸ñÊ½»¯×Ö·û´®
+    int len = vsnprintf(tx_buf, sizeof(tx_buf), format, args); // æ ¼å¼åŒ–å­—ç¬¦ä¸²
     va_end(args);
-    if (len > 0 && len < sizeof(tx_buf)) { // ±ÜÃâ»º³åÇøÒç³ö
+    if (len > 0 && len < sizeof(tx_buf)) { // é¿å…ç¼“å†²åŒºæº¢å‡º
         dma_tx_busy = 1;
         HAL_UART_Transmit_DMA(&huart4, (uint8_t*)tx_buf, len);
     }
@@ -329,10 +340,10 @@ int dma_printf(const char *format, ...)
 }
 
 /**
- * @brief ÖÜÆÚ´òÓ¡¼¤¹âÀ×´ïµãÊı¾İ£¨Ã¿200ms´òÓ¡Ò»´Î£©
- * @param points µãÊı¾İÖ¸Õë£¨Ö¸Ïò´óĞ¡Îª POINT_PER_PACK * LidarPoint_t µÄÊı×é£©
- * @note  Ê¹ÓÃ¾²Ì¬±äÁ¿¼ÇÂ¼ÉÏ´Î´òÓ¡Ê±¼ä£¬ÄÚ²¿×Ô¶¯¿ØÖÆ´òÓ¡ÆµÂÊ
- *        º¯ÊıÊÇÏß³Ì°²È«µÄ£¨»ùÓÚ HAL ºÁÃë¼¶ tick ÊµÏÖ£©
+ * @brief å‘¨æœŸæ‰“å°æ¿€å…‰é›·è¾¾ç‚¹æ•°æ®ï¼ˆæ¯200msæ‰“å°ä¸€æ¬¡ï¼‰
+ * @param points ç‚¹æ•°æ®æŒ‡é’ˆï¼ˆæŒ‡å‘å¤§å°ä¸º POINT_PER_PACK * LidarPoint_t çš„æ•°ç»„ï¼‰
+ * @note  ä½¿ç”¨é™æ€å˜é‡è®°å½•ä¸Šæ¬¡æ‰“å°æ—¶é—´ï¼Œå†…éƒ¨è‡ªåŠ¨æ§åˆ¶æ‰“å°é¢‘ç‡
+ *        å‡½æ•°æ˜¯çº¿ç¨‹å®‰å…¨çš„ï¼ˆåŸºäº HAL æ¯«ç§’çº§ tick å®ç°ï¼‰
  */
 void lidar_print_points_periodic(LidarPoint_t *points)
 {
