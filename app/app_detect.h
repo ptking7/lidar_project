@@ -4,39 +4,49 @@
 #include "stdint.h"
 #include "bsp_lidar.h"
 
-/* ==================== 检测扇区（30° 正前方） ====================
- * 雷达 0° 为正前方，本配置覆盖 0°~15° 与 345°~360°（合计 30°）
+/* ==================== 正前方走廊（随距离变窄） ====================
+ * 9 m 内保持约 2 m 总宽（中心线左右各 CORRIDOR_HALF_WIDTH_MM）。
+ * 半角 ≈ atan(1000/dist_mm)，远处窄、近处宽。
  */
-#define APP_DETECT_ANGLE_LEFT_MAX_DEG    15.0f
-#define APP_DETECT_ANGLE_RIGHT_MIN_DEG   345.0f
+#define APP_DETECT_CORRIDOR_HALF_WIDTH_MM  1000u   /* 总宽 2 m */
+#define APP_DETECT_CORRIDOR_MAX_HALF_DEG   30.0f   /* 近距半角上限 */
+#define APP_DETECT_RANGE_MAX_MM            9000u   /* 走廊/检测最远距离 9 m */
 
 /* ==================== 距离阈值（mm） ====================
- * STL-19P：量程 0.1~12 m，角分辨率约 0.8°，2~8 m 测距精度约 ±20 mm。
- * 0.25 m×0.25 m 目标在 7 m 处张角约 2°，每圈仅约 2~3 点，小目标远距离易漏检。
- * DETECT_DIST_MAX：参与聚类的有效量程（建议 4~5 m 内较稳）。
- * COMM_*：与四轮车协议 V1.0 一致的对外预警/停车阈值。
+ * COMM_*：与四轮车协议 V1.0 一致，通信层不改。
  */
 #define APP_DETECT_DIST_MIN_MM           100u
-#define APP_DETECT_DIST_MAX_MM           5000u
+#define APP_DETECT_DIST_MAX_MM           APP_DETECT_RANGE_MAX_MM
 
 #define APP_COMM_WARN_DIST_MM            7000u
 #define APP_COMM_STOP_DIST_MM            5000u
 
-/* 小目标确认：扇区内至少命中点数、相邻点最大角度差（度） */
+/* 0.25 m 目标宽度：用于按距离计算聚类角度（近大远小） */
+#define APP_DETECT_TARGET_WIDTH_MM       250u
+#define APP_DETECT_CLUSTER_ANGLE_MIN_DEG 2.0f
+#define APP_DETECT_CLUSTER_ANGLE_MAX_DEG 8.0f
+#define APP_DETECT_CLUSTER_DD_MIN_MM     200u
+#define APP_DETECT_CLUSTER_DD_MAX_MM     500u
+#define APP_DETECT_CLUSTER_DD_RATIO_PCT  5u      /* dd_max = dist * 5% */
+
 #define APP_DETECT_MIN_HIT_POINTS        2u
-#define APP_DETECT_CLUSTER_MAX_ANGLE_DEG 3.0f
 #define APP_DETECT_MIN_INTENSITY         15u
+#define APP_DETECT_NEAR_SINGLE_MAX_MM    800u    /* 仅 1 点且很近时直接确认 */
 
-/* 连续若干帧未检出则清除障碍状态（约 10 帧雷达包） */
-#define APP_DETECT_MISS_FRAMES_MAX       10u
+/* 滑动窗口：跨 UART 包累计走廊内点再聚类 */
+#define APP_DETECT_WINDOW_MS             200u
+#define APP_DETECT_BUF_MAX               64u
 
-/* 兜底：长时间无任何成功检出则强制清除 */
+/* 多帧确认 / 清除；输出距离滤波 */
+#define APP_DETECT_CONFIRM_FRAMES        3u
+#define APP_DETECT_CLEAR_FRAMES          5u
+#define APP_DETECT_DIST_JUMP_MM          400u   /* 单帧距离跳变抑制 */
 #define APP_DETECT_SCAN_HOLD_MS          500u
 
 typedef struct {
-    uint8_t  valid;          /* 1=当前扇区内确认有障碍物 */
-    uint16_t dist_mm;        /* 扇区内最近障碍距离，无障碍为 0xFFFF */
-    uint8_t  hit_points;     /* 本帧扇区内有效命中数（调试） */
+    uint8_t  valid;          /* 1=确认有障碍物 */
+    uint16_t dist_mm;        /* 走廊内最近障碍距离，无障碍为 0xFFFF */
+    uint8_t  hit_points;     /* 窗口内参与确认的点数（调试） */
 } AppDetectResult_t;
 
 void app_detect_init(void);
