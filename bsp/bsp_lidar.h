@@ -14,7 +14,7 @@
 #endif
 
 #ifndef LIDAR_STATS_PERIOD_MS
-#define LIDAR_STATS_PERIOD_MS   200        // 统计打印周期（毫秒）
+#define LIDAR_STATS_PERIOD_MS   50        // 统计打印周期（毫秒）
 #endif
 
 // ==================== 数据结构 ====================

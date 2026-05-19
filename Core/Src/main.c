@@ -107,7 +107,7 @@ int main(void)
     lidar_process();
     
     /* 周期性打印雷达点云（200ms一次）串口4显示 */
-//    lidar_print_points_periodic(lidar_output_points);
+    lidar_print_points_periodic(lidar_output_points);
     
   }
   /* USER CODE END 3 */

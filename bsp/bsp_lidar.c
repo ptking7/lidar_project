@@ -257,11 +257,11 @@ void lidar_print_stats(void)
         if (bps_est > 0) {
             success_rate = ((float)fps_est * LIDAR_PACK_LEN / bps_est) * 100.0f;
 					  //因为雷达传输速率太高，有时候有1ms的误差会导致超出100，这里矩形限幅
-//					  if(success_rate > 100.0f) success_rate = 100.0f;
+					  if(success_rate > 100.0f) success_rate = 100.0f;
         }
 
-        dma_printf("[LIDAR] B/s=%lu, FPS=%lu, success=%.1f%%\r\n",
-        bps_est, fps_est, success_rate);
+//        dma_printf("[LIDAR] B/s=%lu, FPS=%lu, success=%.1f%%\r\n",
+//        bps_est, fps_est, success_rate);
     }
 }
 
@@ -337,21 +337,23 @@ int dma_printf(const char *format, ...)
 void lidar_print_points_periodic(LidarPoint_t *points)
 {
     static uint32_t last_print_tick = 0;
-    const uint32_t print_interval_ms = 200;
+    const uint32_t print_interval_ms = 50;
 
     uint32_t now = HAL_GetTick();
     if ((now - last_print_tick) >= print_interval_ms) {
         last_print_tick = now;
 
-        dma_printf("\r\n===== Lidar Points (12) =====\r\n");
+//        dma_printf("\r\n===== Lidar Points (12) =====\r\n");
+			
         for (int i = 0; i < POINT_PER_PACK; i++) {
+					if(points[i].angle_deg <= 45 || points[i].angle_deg >= 315)
             dma_printf("  [%d] angle:%.2f deg, dist:%u mm, int:%u\r\n",
                        i,
                        points[i].angle_deg,
                        (unsigned)points[i].distance_mm,
                        (unsigned)points[i].intensity);
         }
-        dma_printf("============================\r\n");
+//        dma_printf("============================\r\n");
     }
 }
 
