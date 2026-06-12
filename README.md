@@ -30,7 +30,6 @@ STM32 **只上报**预警等级与距离，不直接控制车辆；停/减速/恢复由四轮车主控实现。
 | 项目 | 配置 |
 |------|------|
 | MCU | STM32F103RCT6（LQFP64） |
-| 系统时钟 | HSE + PLL，72 MHz |
 | 雷达串口 | USART2，115200 8N1，PA2(TX) / PA3(RX) |
 | 车辆串口 | UART4，115200 8N1，PC10(TX) / PC11(RX) |
 
@@ -93,25 +92,6 @@ GND           ─── GND
 
 > 协议文档中速度字段写作 m/s；当前固件与仿真脚本统一使用 **mm/s**（int16），对接时请与对端确认单位。
 
-### 示例帧（N=8）
-
-预警，障碍 6.5 m：
-
-```
-AA 55 08 01 6A 19 00 00 00 00 03 24 F2
-```
-
-急停，障碍 4.0 m：
-
-```
-AA 55 08 02 A0 0F 00 00 00 00 03 0C 1D
-```
-
-车速 800 mm/s：
-
-```
-AA 55 08 20 03 00 00 00 00 00 05 9C 2B
-```
 
 ### 链路超时
 
@@ -153,10 +133,9 @@ pip install pyserial
 python tools/vehicle_comm_sim.py -p COM13
 
 # 固定速度 800 mm/s，发送频率 25 Hz
-python tools/vehicle_comm_sim.py -p COM13 --speed 800 --tx-hz 25
-
+python tools/vehicle_comm_sim.py
 # 自定义交替速度与切换间隔
-python tools/vehicle_comm_sim.py -p COM13 --alternate 10 15 --switch-sec 3 --tx-hz 20
+python tools/vehicle_comm_sim.py 
 ```
 
 ### 参数说明
@@ -175,8 +154,8 @@ python tools/vehicle_comm_sim.py -p COM13 --alternate 10 15 --switch-sec 3 --tx-
 
 ```
 [RX #0001] warn=0 clear (0)  dist=no obstacle (0xFFFF)  heartbeat=0x01
-[RX #0042] warn=1 warn  (1)  dist=6500 mm (6.50 m)  heartbeat=0x03
-[RX #0058] warn=2 stop  (2)  dist=4000 mm (4.00 m)  heartbeat=0x03
+[RX #0042] warn=1 warn  (1)  dist=6500 mm (6.50 m)      heartbeat=0x03
+[RX #0058] warn=2 stop  (2)  dist=4000 mm (4.00 m)      heartbeat=0x03
 ```
 
 脚本内置与固件相同的帧解析状态机（帧头 0xAA 0x55 → LEN → DATA → CRC）及 CRC16/MODBUS 校验。
