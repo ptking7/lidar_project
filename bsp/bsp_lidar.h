@@ -10,13 +10,11 @@
 #define LIDAR_PACK_LEN         (1+1+2+2+ POINT_PER_PACK*3 +2+2+1)  // 47字节
 #define LIDAR_ANGLE_UNIT36000  36000u      // 360.00度对应0.01度单位值
 
-#ifndef LIDAR_STATS_ENABLE
-#define LIDAR_STATS_ENABLE      1          // 启用统计信息打印 定义为0则不打印统计信息 
-#endif
 
-#ifndef LIDAR_STATS_PERIOD_MS
+#define LIDAR_STATS_ENABLE      1          // 启用统计信息打印 定义为0则不打印统计信息 
+
 #define LIDAR_STATS_PERIOD_MS   50        // 统计打印周期（毫秒）
-#endif
+
 
 // ==================== 数据结构 ====================
 // 原始点数据结构（对应通讯协议）
@@ -44,7 +42,7 @@ typedef struct {
     uint8_t  intensity;
 } LidarPoint_t;
 
-// ==================== 接口函数（用户只需关注这些函数） ====================
+// ==================== 接口函数（只需关注这些函数） ====================
 /**
  * @brief 初始化激光雷达模块（启用DMA接收）
  * @param out_points 外部提供的点数据缓冲区指针（大小为 POINT_PER_PACK * LidarPoint_t）

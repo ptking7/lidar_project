@@ -94,7 +94,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_UART4_Init();
   /* USER CODE BEGIN 2 */
-	//????????????????
   lidar_init(lidar_output_points);
   app_detect_init();
   app_comm_init();
@@ -107,7 +106,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		/* ?????????DMA??+????+????? */
     lidar_process();
     if (lidar_take_frame_ready()) {
       app_detect_feed(lidar_output_points, POINT_PER_PACK);
